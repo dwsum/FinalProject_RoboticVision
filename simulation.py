@@ -98,7 +98,10 @@ class simulation:
     def calculateNextPoint(self, point, angle):
         smallAngle = angle % 180
         if smallAngle > 90:
-            smallAngle = 90 - (smallAngle - 90)
+            if smallAngle < 45:
+                smallAngle = 90 - (smallAngle - 90)
+            else:
+                smallAngle = smallAngle
         quadrant = 0
         tmpAngle = smallAngle
         while tmpAngle < angle:
