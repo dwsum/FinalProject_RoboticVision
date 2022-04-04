@@ -26,14 +26,30 @@ class simulation:
         self.changeAngle = 5
 
 
-    def generateCircleCourse(self):
+    #NOTE!!!! If you wish to create new courses, but still use simulation. Just follow 3 step guide below.
+    def generateCircleCourse(self, mask = False):
         theCourse = np.zeros((self.ySize, self.xSize))
 
-        cv.circle(theCourse, (int(self.xSize/2), int(self.ySize/2)), min(int(self.xSize/2), int(self.ySize/2)) - self.edgeBufferSize, self.lineColor, thickness=self.lineWidth)
+        if not mask:
+            theThickness = self.lineWidth
+        else:
+            #for creating courses, make sure this is the variable used for fill. This should fill whatever shape you do. (step 1)
+            theThickness = -1
 
+        #for creating new courses, simply make the outside curve here. (step 2)
+        cv.circle(theCourse, (int(self.xSize/2), int(self.ySize/2)), min(int(self.xSize/2), int(self.ySize/2)) - self.edgeBufferSize, self.lineColor, thickness=theThickness)
+
+        if mask:
+            theCourse = 255 - theCourse
+
+        #for creating new courses, simply draw the inside curve here (step 3)
         cv.circle(theCourse, (int(self.xSize / 2), int(self.ySize / 2)),
                   min(int(self.xSize / 2), int(self.ySize / 2)) - self.edgeBufferSize - int(self.trackWidth /2), self.lineColor,
-                  thickness=self.lineWidth)
+                  thickness=theThickness)
+
+        if mask:
+            cv.imshow("mask", theCourse)
+            cv.waitKey(1)
 
         return theCourse
 
@@ -112,8 +128,8 @@ class simulation:
         firstPoint = (750, 750)
         prevPoint = None
         prevAngle = None
-        theCourse = self.generateCircleCourse()
-        background = theCourse.copy()
+        theCourse = self.generateCircleCourse(mask=False)
+        background = self.generateCircleCourse(mask=True)
         angle = -30.1#0.1
 
         while not crash:
@@ -126,7 +142,7 @@ class simulation:
             angle = self.getAngle(angle)
             firstPoint = self.calculateNextPoint(firstPoint, angle)
 
-            # crash = self.checkBoundary(firstPoint, background, angle)
+            crash = self.checkBoundary(firstPoint, background, angle)
 
 
 
