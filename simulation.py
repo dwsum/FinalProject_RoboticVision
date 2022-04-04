@@ -39,43 +39,18 @@ class simulation:
 
     def getXYChange(self, angle):
 
-        smallAngle = angle % 180
-        if smallAngle > 90:
-            # smallAngle = 90 - (smallAngle - 90)
-            if smallAngle < 45:
-                smallAngle = 90 - (smallAngle - 90)
-            else:
-                smallAngle = smallAngle
+        # Keeps angle between -360 and 360. Technically don't need. But in case it gets so many laps
+        # that it fills up a memory or something.
+        if abs(angle) >360:
+            if angle > 0:
+                angle = angle - 360
+            elif angle < 0:
+                angle = angle + 360
 
-        if angle > 0:
-            quadrant = 0
-            tmpAngle = abs(smallAngle)
-            while tmpAngle < abs(angle):
-                tmpAngle += 90
-                quadrant += 1
+        xChange = int(math.sin(angle * 2 * math.pi / 360) * self.speedMovePixels)
+        yChange = int(math.cos(angle * 2 * math.pi / 360) * self.speedMovePixels)
 
-            quadrant = quadrant%4
-        else:
-            quadrant = 0
-            tmpAngle = abs(smallAngle)
-            while tmpAngle > abs(angle):
-                tmpAngle -= 90
-                quadrant -= 1
-
-            quadrant = quadrant % 4
-            quadrant = 4 - quadrant
-
-        xChange = int(math.sin(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
-        yChange = int(math.cos(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
-
-        if quadrant == 0 or quadrant == 1:
-            xChange = -xChange
-
-        if quadrant == 0 or quadrant == 3:
-            yChange = -yChange
-
-        print("angle", angle, "xchange", xChange, "ychange", yChange, "small angle", smallAngle, "quadrant", quadrant, "math.sin", math.sin(smallAngle),
-              "math.cos", math.cos(smallAngle))
+        print("angle", angle, "xchange", xChange, "ychange", yChange)
         return xChange, yChange
 
     def centerToPoint(self, point, angle, theCourse, color, draw=True):
