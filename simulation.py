@@ -37,18 +37,33 @@ class simulation:
 
         return theCourse
 
-    def centerToPoint(self, point, angle, theCourse, color, draw=True):
+    def getXYChange(self, angle):
+
         smallAngle = angle % 180
         if smallAngle > 90:
-            if (smallAngle - 90) > 45:
+            # smallAngle = 90 - (smallAngle - 90)
+            if smallAngle < 45:
                 smallAngle = 90 - (smallAngle - 90)
             else:
                 smallAngle = smallAngle
-        quadrant = 0
-        tmpAngle = smallAngle
-        while tmpAngle < angle:
-            tmpAngle += 90
-            quadrant += 1
+
+        if angle > 0:
+            quadrant = 0
+            tmpAngle = abs(smallAngle)
+            while tmpAngle < abs(angle):
+                tmpAngle += 90
+                quadrant += 1
+
+            quadrant = quadrant%4
+        else:
+            quadrant = 0
+            tmpAngle = abs(smallAngle)
+            while tmpAngle > abs(angle):
+                tmpAngle -= 90
+                quadrant -= 1
+
+            quadrant = quadrant % 4
+            quadrant = 4 - quadrant
 
         xChange = int(math.sin(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
         yChange = int(math.cos(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
@@ -58,6 +73,13 @@ class simulation:
 
         if quadrant == 0 or quadrant == 3:
             yChange = -yChange
+
+        print("angle", angle, "xchange", xChange, "ychange", yChange, "small angle", smallAngle, "quadrant", quadrant, "math.sin", math.sin(smallAngle),
+              "math.cos", math.cos(smallAngle))
+        return xChange, yChange
+
+    def centerToPoint(self, point, angle, theCourse, color, draw=True):
+        xChange, yChange = self.getXYChange(angle)
 
         firstPoint = (point[0] - xChange, point[1] - yChange)
         secondPoint = (point[0] + xChange, point[1] + yChange)
@@ -96,28 +118,8 @@ class simulation:
         return angle
 
     def calculateNextPoint(self, point, angle):
-        smallAngle = angle % 180
-        if smallAngle > 90:
-            if smallAngle < 45:
-                smallAngle = 90 - (smallAngle - 90)
-            else:
-                smallAngle = smallAngle
-        quadrant = 0
-        tmpAngle = smallAngle
-        while tmpAngle < angle:
-            tmpAngle += 90
-            quadrant += 1
+        xChange, yChange = self.getXYChange(angle)
 
-        xChange = int(math.sin(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
-        yChange = int(math.cos(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
-
-        if quadrant == 0 or quadrant == 1:
-            xChange = -xChange
-
-        if quadrant == 0 or quadrant == 3:
-            yChange = -yChange
-
-        print("angle", angle, "xchange", xChange, "ychange", yChange, smallAngle, quadrant, math.sin(smallAngle), math.cos(smallAngle), smallAngle)
         return (point[0] + xChange, point[1] + yChange)
 
     def checkBoundary(self, point, course, angle):
@@ -142,7 +144,7 @@ class simulation:
         prevAngle = None
         theCourse = self.generateCircleCourse()
         background = theCourse.copy()
-        angle = 0.1
+        angle = -30.1#0.1
 
         while not crash:
             self.drawPoint(firstPoint, angle, prevPoint, prevAngle, theCourse)
@@ -154,7 +156,6 @@ class simulation:
             firstPoint = self.calculateNextPoint(firstPoint, angle)
 
             # crash = self.checkBoundary(firstPoint, background, angle)
-
 
 
 
