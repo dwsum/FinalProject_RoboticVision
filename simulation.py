@@ -26,38 +26,51 @@ class simulation:
         self.changeAngle = 5
 
 
-    def generateCircleCourse(self):
+    #NOTE!!!! If you wish to create new courses, but still use simulation. Just follow 3 step guide below.
+    def generateCircleCourse(self, mask = False):
         theCourse = np.zeros((self.ySize, self.xSize))
 
-        cv.circle(theCourse, (int(self.xSize/2), int(self.ySize/2)), min(int(self.xSize/2), int(self.ySize/2)) - self.edgeBufferSize, self.lineColor, thickness=self.lineWidth)
+        if not mask:
+            theThickness = self.lineWidth
+        else:
+            #for creating courses, make sure this is the variable used for fill. This should fill whatever shape you do. (step 1)
+            theThickness = -1
 
+        #for creating new courses, simply make the outside curve here. (step 2)
+        cv.circle(theCourse, (int(self.xSize/2), int(self.ySize/2)), min(int(self.xSize/2), int(self.ySize/2)) - self.edgeBufferSize, self.lineColor, thickness=theThickness)
+
+        if mask:
+            theCourse = 255 - theCourse
+
+        #for creating new courses, simply draw the inside curve here (step 3)
         cv.circle(theCourse, (int(self.xSize / 2), int(self.ySize / 2)),
                   min(int(self.xSize / 2), int(self.ySize / 2)) - self.edgeBufferSize - int(self.trackWidth /2), self.lineColor,
-                  thickness=self.lineWidth)
+                  thickness=theThickness)
+
+        if mask:
+            cv.imshow("mask", theCourse)
+            cv.waitKey(1)
 
         return theCourse
 
+    def getXYChange(self, angle):
+
+        # Keeps angle between -360 and 360. Technically don't need. But in case it gets so many laps
+        # that it fills up a memory or something.
+        if abs(angle) >360:
+            if angle > 0:
+                angle = angle - 360
+            elif angle < 0:
+                angle = angle + 360
+
+        xChange = int(math.sin(angle * 2 * math.pi / 360) * self.speedMovePixels)
+        yChange = int(math.cos(angle * 2 * math.pi / 360) * self.speedMovePixels)
+
+        print("angle", angle, "xchange", xChange, "ychange", yChange)
+        return xChange, yChange
+
     def centerToPoint(self, point, angle, theCourse, color, draw=True):
-        smallAngle = angle % 180
-        if smallAngle > 90:
-            if (smallAngle - 90) > 45:
-                smallAngle = 90 - (smallAngle - 90)
-            else:
-                smallAngle = smallAngle
-        quadrant = 0
-        tmpAngle = smallAngle
-        while tmpAngle < angle:
-            tmpAngle += 90
-            quadrant += 1
-
-        xChange = int(math.sin(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
-        yChange = int(math.cos(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
-
-        if quadrant == 0 or quadrant == 1:
-            xChange = -xChange
-
-        if quadrant == 0 or quadrant == 3:
-            yChange = -yChange
+        xChange, yChange = self.getXYChange(angle)
 
         firstPoint = (point[0] - xChange, point[1] - yChange)
         secondPoint = (point[0] + xChange, point[1] + yChange)
@@ -67,11 +80,6 @@ class simulation:
             return firstPoint, secondPoint
 
     def drawPoint(self, nextPoint, angle, prevPoint, prevAngle, theCourse):
-
-        # def drawHelper(point, color):
-            # firstPoint = (point[0] - int(self.carSize / 2), point[1] - int(self.carSize / 2))
-            # secondPoint = (point[0] + int(self.carSize / 2), point[1] + int(self.carSize / 2))
-            # cv.arrowedLine(theCourse, firstPoint, secondPoint, color, self.carThickness)
 
         #erase prevPoint
         if prevPoint:
@@ -96,25 +104,8 @@ class simulation:
         return angle
 
     def calculateNextPoint(self, point, angle):
-        smallAngle = angle % 180
-        if smallAngle > 90:
-            smallAngle = 90 - (smallAngle - 90)
-        quadrant = 0
-        tmpAngle = smallAngle
-        while tmpAngle < angle:
-            tmpAngle += 90
-            quadrant += 1
+        xChange, yChange = self.getXYChange(angle)
 
-        xChange = int(math.sin(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
-        yChange = int(math.cos(smallAngle * 2 * math.pi / 360) * self.speedMovePixels)
-
-        if quadrant == 0 or quadrant == 1:
-            xChange = -xChange
-
-        if quadrant == 0 or quadrant == 3:
-            yChange = -yChange
-
-        print("angle", angle, "xchange", xChange, "ychange", yChange, smallAngle, quadrant, math.sin(smallAngle), math.cos(smallAngle), smallAngle)
         return (point[0] + xChange, point[1] + yChange)
 
     def checkBoundary(self, point, course, angle):
@@ -137,21 +128,21 @@ class simulation:
         firstPoint = (750, 750)
         prevPoint = None
         prevAngle = None
-        theCourse = self.generateCircleCourse()
-        background = theCourse.copy()
-        angle = 0.1
+        theCourse = self.generateCircleCourse(mask=False)
+        background = self.generateCircleCourse(mask=True)
+        angle = -30.1#0.1
 
         while not crash:
             self.drawPoint(firstPoint, angle, prevPoint, prevAngle, theCourse)
 
-            angle = self.getAngle(angle)
-
             prevPoint = firstPoint
             prevAngle = angle
+
+            #get next points
+            angle = self.getAngle(angle)
             firstPoint = self.calculateNextPoint(firstPoint, angle)
 
-            # crash = self.checkBoundary(firstPoint, background, angle)
-
+            crash = self.checkBoundary(firstPoint, background, angle)
 
 
 
