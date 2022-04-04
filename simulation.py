@@ -90,11 +90,6 @@ class simulation:
 
     def drawPoint(self, nextPoint, angle, prevPoint, prevAngle, theCourse):
 
-        # def drawHelper(point, color):
-            # firstPoint = (point[0] - int(self.carSize / 2), point[1] - int(self.carSize / 2))
-            # secondPoint = (point[0] + int(self.carSize / 2), point[1] + int(self.carSize / 2))
-            # cv.arrowedLine(theCourse, firstPoint, secondPoint, color, self.carThickness)
-
         #erase prevPoint
         if prevPoint:
             self.centerToPoint(prevPoint, prevAngle, theCourse, (0,0,0))
@@ -149,10 +144,11 @@ class simulation:
         while not crash:
             self.drawPoint(firstPoint, angle, prevPoint, prevAngle, theCourse)
 
-            angle = self.getAngle(angle)
-
             prevPoint = firstPoint
             prevAngle = angle
+
+            #get next points
+            angle = self.getAngle(angle)
             firstPoint = self.calculateNextPoint(firstPoint, angle)
 
             # crash = self.checkBoundary(firstPoint, background, angle)
