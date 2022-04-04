@@ -34,6 +34,7 @@ class CarCamera:
         carViewUnwarped = self.rotateAndCropMask(carViewMask,point,angle)
 
         carView = cv.warpPerspective(carViewUnwarped, self.Minv, (self.IMAGE_W, self.IMAGE_H))  # Image warping
+        carViewFilledUp = self.fill(carView)
         return carView
 
     def getCarMask(self,point,angle):
@@ -80,6 +81,12 @@ class CarCamera:
             x_end += abs(xminAct)
         carView[y_start:y_end, x_start:x_end] = carViewRotatedCropped
         return carView
+
+    def fill(self, carView):
+        for i in reversed(range(self.IMAGE_H - 1)):
+            carView[i] = np.max(carView[i:i + 2], axis=0)
+        return carView
+
 
 if __name__ == "__main__":
     car = CarCamera()
