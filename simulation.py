@@ -101,8 +101,15 @@ class simulation:
         cv.imshow("car view",carView)
         cv.waitKey(1)
 
-    def getAngle(self, angle):
-        userResponse = input("l,r,s?")
+    def getAngle(self, angle, programChoice=None):
+        if programChoice == None:
+            userResponse = input("l,r,s?")
+        else:
+            if programChoice == 0:
+                userResponse = "l"
+            else:
+                userResponse = "r"
+
         if userResponse == "l":
             angle = angle - self.changeAngle
         elif userResponse == "r":
@@ -150,6 +157,29 @@ class simulation:
             firstPoint = self.calculateNextPoint(firstPoint, angle)
             crash = self.checkBoundary(firstPoint, self.background, angle)
 
+
+    def reset(self):
+        self.crash = False
+        self.firstPoint = (750, 750)
+        self.prevPoint = None
+        self.prevAngle = None
+        self.theCourse = self.generateCircleCourse(mask=False)
+        self.angle = -30
+        firstImage = self.car.getCarView(self.firstPoint, self.angle)
+
+        return firstImage
+
+    def step(self, action):
+        self.drawPoint(self.firstPoint, self.angle, self.prevPoint, self.prevAngle, self.theCourse)
+
+        self.prevPoint = self.firstPoint
+        self.prevAngle = self.angle
+        # get next points
+        self.angle = self.getAngle(self.angle, action)
+        self.firstPoint = self.calculateNextPoint(self.firstPoint, self.angle)
+        self.crash = self.checkBoundary(self.firstPoint, self.background, self.angle)
+
+        #TODO make correct return type
 
 
 if __name__ == "__main__":

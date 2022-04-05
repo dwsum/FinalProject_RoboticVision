@@ -2,6 +2,8 @@
 # Drew Sumsion is writing this and acknowledging the help and gratitude for offering this code for me to build off of.
 
 #Note, this was originally in colab. So, if you want to run each section at a time I have put in this where it requires user input to move to next section. I called it "colabMode"
+from simulation import simulation
+
 colabMode = True
 
 #imports
@@ -210,7 +212,7 @@ def ppo_main():
     # Init environment
     state_size = 4
     action_size = 2
-    env = gym.make('CartPole-v1')
+    env = simulation()#gym.make('CartPole-v1')
 
     # Init networks
     policy_network = PolicyNetwork(state_size, action_size).cuda()
