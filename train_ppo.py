@@ -27,6 +27,9 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
+seed = 0
+torch.manual_seed(seed)
+
 
 if colabMode:
     print("About to start Part 2: PPO")
