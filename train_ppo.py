@@ -2,9 +2,12 @@
 # Drew Sumsion is writing this and acknowledging the help and gratitude for offering this code for me to build off of.
 
 #Note, this was originally in colab. So, if you want to run each section at a time I have put in this where it requires user input to move to next section. I called it "colabMode"
+from datetime import datetime
+from pathlib import Path
+
 from simulation import simulation
 
-colabMode = True
+colabMode = False
 
 #imports
 # ! pip3 install gym #maybe might not need this one....
@@ -14,7 +17,6 @@ if colabMode:
     print("about to start init.")
     input("Waiting for user input to continue....")
 
-import gym
 import torch
 import torch.nn as nn
 from itertools import chain
@@ -23,6 +25,11 @@ from tqdm import tqdm
 import random
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+seed = 0
+torch.manual_seed(seed)
+
 
 if colabMode:
     print("About to start Part 2: PPO")
@@ -70,7 +77,7 @@ def get_action_ppo(network, state):
           array: output distribution of policy network
     """
     # run the state through the network
-    state_tensor = torch.Tensor([state]).cuda()
+    state_tensor = torch.Tensor([state]).to(device)
     action_dist = network(state_tensor)
 
     # now we pick one action from the action distribution
@@ -91,15 +98,19 @@ def learn_ppo(optim, policy, value, memory_dataloader, epsilon, policy_epochs):
           epsilon (float): trust region
           policy_epochs (int): number of times to iterate over all memory
     """
+    epoch_cntr = 0
     for epoch in range(0, policy_epochs):
+        cntr = 0
+        epoch_cntr += 1
         for state, action, action_dist, theReturn in memory_dataloader:
+            cntr += 1
             optim.zero_grad()
 
             # first set ups
-            state = state.float().cuda()
-            theReturn = theReturn.float().cuda()
-            action = action.cuda()
-            action_dist = action_dist.cuda()
+            state = state.float().to(device)
+            theReturn = theReturn.float().to(device)
+            action = action.to(device)
+            action_dist = action_dist.to(device)
             action_dist = action_dist.detach()
 
             # get the value loss
@@ -110,7 +121,7 @@ def learn_ppo(optim, policy, value, memory_dataloader, epsilon, policy_epochs):
             advantage = advantage.detach()
 
             # policy loss
-            encoded = nn.functional.one_hot(action).bool()
+            encoded = nn.functional.one_hot(action, num_classes=policy(state).shape[1]).bool()
             policy_ratio = policy(state)[encoded] / action_dist.squeeze()[encoded]
 
             # prevent overfitting
@@ -147,7 +158,7 @@ class RLDataset(Dataset):
 class PolicyNetwork(nn.Module):
     def __init__(self, state_size, action_size):
         super().__init__()
-        hidden_size = 8
+        hidden_size = 450#8
 
         self.net = nn.Sequential(nn.Linear(state_size, hidden_size),
                                  nn.ReLU(),
@@ -174,7 +185,7 @@ class PolicyNetwork(nn.Module):
 class ValueNetwork(nn.Module):
     def __init__(self, state_size):
         super().__init__()
-        hidden_size = 8
+        hidden_size = 450#8
 
         self.net = nn.Sequential(nn.Linear(state_size, hidden_size),
                                  nn.ReLU(),
@@ -201,8 +212,9 @@ if colabMode:
 
 def ppo_main():
     # Hyper parameters
-    lr = 1e-3
-    epochs = 20
+    lr = 1e-4
+    epochs = 500
+    saveEvery_epochs = 100
     env_samples = 100
     gamma = 0.9
     batch_size = 256
@@ -210,16 +222,18 @@ def ppo_main():
     policy_epochs = 5
 
     # Init environment
-    state_size = 4
-    action_size = 2
+    state_size = 225#4
+    action_size = 60#2
     env = simulation()#gym.make('CartPole-v1')
 
     # Init networks
-    policy_network = PolicyNetwork(state_size, action_size).cuda()
-    value_network = ValueNetwork(state_size).cuda()
+    policy_network = PolicyNetwork(state_size, action_size).to(device)
+    value_network = ValueNetwork(state_size).to(device)
 
     # Init optimizer
     optim = torch.optim.Adam(chain(policy_network.parameters(), value_network.parameters()), lr=lr)
+
+    savePath = None
 
     # Start main loop
     results_ppo = []
@@ -239,7 +253,7 @@ def ppo_main():
             cum_reward = 0  # Track cumulative reward
 
             # Begin episode
-            while not done and cum_reward < 200:  # End after 200 steps
+            while not done and cum_reward < 750:  # End after 20000 steps
                 # Get action
                 action, action_dist = get_action_ppo(policy_network, state)
 
@@ -260,7 +274,7 @@ def ppo_main():
 
         # Train
         dataset = RLDataset(memory)
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
         learn_ppo(optim, policy_network, value_network, loader, epsilon, policy_epochs)
 
         # Print results
@@ -268,12 +282,34 @@ def ppo_main():
         loop.update(1)
         loop.set_description("Epochs: {} Reward: {}".format(epoch, results_ppo[-1]))
 
+        if not (epoch % saveEvery_epochs):
+            if savePath is None:
+                savePath = Path("./Results")
+                savePath.mkdir(exist_ok=True)
+                # create directory to save in
+                saveDir = str(datetime.now())
+                saveDir = saveDir.replace(" ", "__")
+                saveDir = saveDir.replace("-", "_")
+                saveDir = saveDir.replace(":", "_")
+                saveDir = saveDir.replace(".", "_")
+                savePath = savePath / Path(saveDir)
+                savePath.mkdir()
+
+            policyPath = savePath / ("policy_epoch_" + str(epoch) + ".pt")
+            valuePath = savePath / ("value_epoch_" + str(epoch) + ".pt")
+            plotPath = savePath / ("plot_epoch_" + str(epoch) + ".png")
+
+            torch.save(policy_network.state_dict(), str(policyPath))
+            torch.save(value_network.state_dict(), str(valuePath))
+
+            plt.plot(results_ppo)
+            plt.xlabel("Epoch")
+            plt.ylabel("Reward")
+            # plt.show()
+            plt.savefig(plotPath)
+
     return results_ppo
 
 
 results_ppo = ppo_main()
 
-plt.plot(results_ppo)
-plt.xlabel("Epoch")
-plt.ylabel("Reward")
-plt.show()

@@ -10,7 +10,6 @@ class CarCamera:
         self.background = background
         src = np.float32([[0, self.IMAGE_H], [self.IMAGE_W, self.IMAGE_H], [0, 0], [self.IMAGE_W, 0]])
         dst = np.float32([[284, self.IMAGE_H], [355, self.IMAGE_H], [0, 0], [self.IMAGE_W, 0]])
-        print(src.shape, dst.shape)
         self.Minv = cv.getPerspectiveTransform(dst, src)  # Inverse transformation
         self.bottom_x_offset = 35
         self.top_x_offset = 320
