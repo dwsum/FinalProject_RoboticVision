@@ -4,7 +4,7 @@
 #Note, this was originally in colab. So, if you want to run each section at a time I have put in this where it requires user input to move to next section. I called it "colabMode"
 from simulation import simulation
 
-colabMode = True
+colabMode = False
 
 #imports
 # ! pip3 install gym #maybe might not need this one....
@@ -14,7 +14,6 @@ if colabMode:
     print("about to start init.")
     input("Waiting for user input to continue....")
 
-import gym
 import torch
 import torch.nn as nn
 from itertools import chain
@@ -23,6 +22,8 @@ from tqdm import tqdm
 import random
 from torch.utils.data import Dataset, DataLoader
 import numpy as np
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 if colabMode:
     print("About to start Part 2: PPO")
@@ -70,7 +71,7 @@ def get_action_ppo(network, state):
           array: output distribution of policy network
     """
     # run the state through the network
-    state_tensor = torch.Tensor([state]).cuda()
+    state_tensor = torch.Tensor([state]).to(device)
     action_dist = network(state_tensor)
 
     # now we pick one action from the action distribution
@@ -96,10 +97,10 @@ def learn_ppo(optim, policy, value, memory_dataloader, epsilon, policy_epochs):
             optim.zero_grad()
 
             # first set ups
-            state = state.float().cuda()
-            theReturn = theReturn.float().cuda()
-            action = action.cuda()
-            action_dist = action_dist.cuda()
+            state = state.float().to(device)
+            theReturn = theReturn.float().to(device)
+            action = action.to(device)
+            action_dist = action_dist.to(device)
             action_dist = action_dist.detach()
 
             # get the value loss
@@ -147,7 +148,7 @@ class RLDataset(Dataset):
 class PolicyNetwork(nn.Module):
     def __init__(self, state_size, action_size):
         super().__init__()
-        hidden_size = 8
+        hidden_size = 450#8
 
         self.net = nn.Sequential(nn.Linear(state_size, hidden_size),
                                  nn.ReLU(),
@@ -174,7 +175,7 @@ class PolicyNetwork(nn.Module):
 class ValueNetwork(nn.Module):
     def __init__(self, state_size):
         super().__init__()
-        hidden_size = 8
+        hidden_size = 450#8
 
         self.net = nn.Sequential(nn.Linear(state_size, hidden_size),
                                  nn.ReLU(),
@@ -210,13 +211,13 @@ def ppo_main():
     policy_epochs = 5
 
     # Init environment
-    state_size = 4
-    action_size = 2
+    state_size = 225#4
+    action_size = 60#2
     env = simulation()#gym.make('CartPole-v1')
 
     # Init networks
-    policy_network = PolicyNetwork(state_size, action_size).cuda()
-    value_network = ValueNetwork(state_size).cuda()
+    policy_network = PolicyNetwork(state_size, action_size).to(device)
+    value_network = ValueNetwork(state_size).to(device)
 
     # Init optimizer
     optim = torch.optim.Adam(chain(policy_network.parameters(), value_network.parameters()), lr=lr)
