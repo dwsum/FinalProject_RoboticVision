@@ -21,7 +21,7 @@ class simulation:
         #draw
         self.carColor = (255, 0, 0)
         self.carThickness = 5
-        self.carSize = 15
+        self.carSize = 5
 
         #race params
         self.speedMovePixels = 20
@@ -70,7 +70,6 @@ class simulation:
         xChange = int(math.sin(angle * 2 * math.pi / 360) * self.speedMovePixels)
         yChange = int(math.cos(angle * 2 * math.pi / 360) * self.speedMovePixels)
 
-        print("angle", angle, "xchange", xChange, "ychange", yChange)
         return xChange, yChange
 
 
@@ -104,18 +103,14 @@ class simulation:
     def getAngle(self, angle, programChoice=None):
         if programChoice == None:
             userResponse = input("l,r,s?")
-        else:
-            if programChoice == 0:
-                userResponse = "l"
+            if userResponse == "l":
+                angle = angle - self.changeAngle
+            elif userResponse == "r":
+                angle = angle + self.changeAngle
             else:
-                userResponse = "r"
-
-        if userResponse == "l":
-            angle = angle - self.changeAngle
-        elif userResponse == "r":
-            angle = angle + self.changeAngle
+                angle = angle
         else:
-            angle = angle
+            angle = angle + programChoice
 
         return angle
 
@@ -129,11 +124,7 @@ class simulation:
         # firstPoint = (point[0] - int(self.carSize / 2), point[1] - int(self.carSize / 2))
         # secondPoint = (point[0] + int(self.carSize / 2), point[1] + int(self.carSize / 2))
 
-        print(course[firstPoint])
-        print(course[secondPoint])
-
         if course[firstPoint] or course[secondPoint]:
-            print("CRASH!!!")
             return True
 
         return False
@@ -157,6 +148,16 @@ class simulation:
             firstPoint = self.calculateNextPoint(firstPoint, angle)
             crash = self.checkBoundary(firstPoint, self.background, angle)
 
+    def getCarImage(self):
+        nextImage = self.car.getCarView(self.firstPoint, self.angle)
+
+        #down size to 15 x 15
+        nextImage = cv.resize(nextImage, (15, 15), interpolation=cv.INTER_AREA)
+
+        # insert changing dimensions to be the right size for the network
+        nextImage = nextImage.flatten()
+
+        return nextImage
 
     def reset(self):
         self.crash = False
@@ -165,7 +166,7 @@ class simulation:
         self.prevAngle = None
         self.theCourse = self.generateCircleCourse(mask=False)
         self.angle = -30
-        firstImage = self.car.getCarView(self.firstPoint, self.angle)
+        firstImage = self.getCarImage()
 
         return firstImage
 
@@ -175,11 +176,27 @@ class simulation:
         self.prevPoint = self.firstPoint
         self.prevAngle = self.angle
         # get next points
-        self.angle = self.getAngle(self.angle, action)
+        networkChoiceAngle = action - 30
+        self.angle = self.getAngle(self.angle, networkChoiceAngle)
         self.firstPoint = self.calculateNextPoint(self.firstPoint, self.angle)
         self.crash = self.checkBoundary(self.firstPoint, self.background, self.angle)
 
-        #TODO make correct return type
+        nextImage = self.getCarImage()
+
+        if not self.crash:
+            if abs(networkChoiceAngle) < 5:
+                #reward for turning less than 5
+                reward = 3
+            elif abs(networkChoiceAngle) < 10:
+                #reward for only turning 10
+                reward = 2
+            else:
+                #reward for not crashing
+                reward = 1
+        else:
+            reward = -3
+
+        return nextImage, reward, (self.crash), None
 
 
 if __name__ == "__main__":
