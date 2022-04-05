@@ -1,67 +1,47 @@
 import math
+from pathlib import Path
 
 import cv2 as cv
 import numpy as np
 
 from carCamera import CarCamera
-
+import random
 
 class simulation:
     def __init__(self):
         self.xSize = 1000
         self.ySize = 1000
 
-
-        #circle track parameters
+        # circle track parameters
         self.lineWidth = 5
         self.lineColor = (255, 255, 255)
         self.edgeBufferSize = 100
         self.trackWidth = 200
 
-        #draw
+        # draw
         self.carColor = (255, 0, 0)
         self.carThickness = 5
         self.carSize = 15
 
-        #race params
+        # race params
         self.speedMovePixels = 20
         self.changeAngle = 5
-        self.background = self.generateCircleCourse(mask=True)
-        self.car = CarCamera(self.background)
+        self.courses = list(Path("prepared_courses").iterdir())
+        self.course_index = 0
 
+    # NOTE!!!! If you wish to create new courses, but still use simulation. Just follow 3 step guide below.
+    def generateCircleCourse(self):
+        path = self.courses[self.course_index % len(self.courses)]
+        image = cv.imread(str(path / "course.jpg"))
+        image = cv.cvtColor(image,cv.COLOR_BGR2GRAY)
 
-    #NOTE!!!! If you wish to create new courses, but still use simulation. Just follow 3 step guide below.
-    def generateCircleCourse(self, mask = False):
-        theCourse = np.zeros((self.ySize, self.xSize))
-
-        if not mask:
-            theThickness = self.lineWidth
-        else:
-            #for creating courses, make sure this is the variable used for fill. This should fill whatever shape you do. (step 1)
-            theThickness = -1
-
-        #for creating new courses, simply make the outside curve here. (step 2)
-        cv.circle(theCourse, (int(self.xSize/2), int(self.ySize/2)), min(int(self.xSize/2), int(self.ySize/2)) - self.edgeBufferSize, self.lineColor, thickness=theThickness)
-
-        if mask:
-            theCourse = 255 - theCourse
-
-        #for creating new courses, simply draw the inside curve here (step 3)
-        cv.circle(theCourse, (int(self.xSize / 2), int(self.ySize / 2)),
-                  min(int(self.xSize / 2), int(self.ySize / 2)) - self.edgeBufferSize - int(self.trackWidth /2), self.lineColor,
-                  thickness=theThickness)
-
-        if mask:
-            cv.imshow("mask", theCourse)
-            cv.waitKey(1)
-
-        return theCourse
+        return image
 
     def getXYChange(self, angle):
 
         # Keeps angle between -360 and 360. Technically don't need. But in case it gets so many laps
         # that it fills up a memory or something.
-        if abs(angle) >360:
+        if abs(angle) > 360:
             if angle > 0:
                 angle = angle - 360
             elif angle < 0:
@@ -72,7 +52,6 @@ class simulation:
 
         print("angle", angle, "xchange", xChange, "ychange", yChange)
         return xChange, yChange
-
 
     def centerToPoint(self, point, angle, theCourse, color, draw=True):
         xChange, yChange = self.getXYChange(angle)
@@ -88,17 +67,17 @@ class simulation:
 
     def drawPoint(self, nextPoint, angle, prevPoint, prevAngle, theCourse):
 
-        #erase prevPoint
+        # erase prevPoint
         if prevPoint:
-            self.centerToPoint(prevPoint, prevAngle, theCourse, (0,0,0))
+            self.centerToPoint(prevPoint, prevAngle, theCourse, (0, 0, 0))
             # drawHelper(prevPoint, (0, 0, 0))
 
         self.centerToPoint(nextPoint, angle, theCourse, self.carColor)
         # drawHelper(nextPoint, self.carColor)
 
         cv.imshow("theCourse", theCourse)
-        carView =self.car.getCarView(nextPoint,angle)
-        cv.imshow("car view",carView)
+        carView = self.car.getCarView(nextPoint, angle)
+        cv.imshow("car view", carView)
         cv.waitKey(1)
 
     def getAngle(self, angle, programChoice=None):
@@ -128,43 +107,51 @@ class simulation:
         firstPoint, secondPoint = self.centerToPoint(point, angle, None, None, draw=False)
         # firstPoint = (point[0] - int(self.carSize / 2), point[1] - int(self.carSize / 2))
         # secondPoint = (point[0] + int(self.carSize / 2), point[1] + int(self.carSize / 2))
+        print(firstPoint,secondPoint)
+        check1 = firstPoint[1],firstPoint[0]
+        check2 = secondPoint[1], secondPoint[0]
+        print(course[check1])
+        print(course[check2])
 
-        print(course[firstPoint])
-        print(course[secondPoint])
-
-        if course[firstPoint] or course[secondPoint]:
+        if course[check1] or course[check2]:
             print("CRASH!!!")
             return True
 
         return False
 
-
     def race(self):
-        crash = False
-        firstPoint = (750, 750)
-        prevPoint = None
-        prevAngle = None
-        theCourse = self.generateCircleCourse(mask=False)
-        angle = -30
+        while True:
+            crash = False
+            firstPoint = self.getStartLocation()
+            prevPoint = None
+            prevAngle = None
+            theCourse = self.generateCircleCourse()
+            angle = self.getStartAngle()
+            self.background = self.generateCircleCourse()
 
-        while not crash:
-            self.drawPoint(firstPoint, angle, prevPoint, prevAngle, theCourse)
+            self.car = CarCamera(self.background)
 
-            prevPoint = firstPoint
-            prevAngle = angle
-            #get next points
-            angle = self.getAngle(angle)
-            firstPoint = self.calculateNextPoint(firstPoint, angle)
-            crash = self.checkBoundary(firstPoint, self.background, angle)
+            while not crash:
+                self.drawPoint(firstPoint, angle, prevPoint, prevAngle, theCourse)
 
+                prevPoint = firstPoint
+                prevAngle = angle
+                # get next points
+                angle = self.getAngle(angle)
+                firstPoint = self.calculateNextPoint(firstPoint, angle)
+                crash = self.checkBoundary(firstPoint, self.background, angle)
+            self.course_index +=1
 
     def reset(self):
         self.crash = False
-        self.firstPoint = (750, 750)
+        self.course_index += 1
+        self.firstPoint = self.getStartLocation()
         self.prevPoint = None
         self.prevAngle = None
-        self.theCourse = self.generateCircleCourse(mask=False)
-        self.angle = -30
+        self.theCourse = self.generateCircleCourse()
+        self.angle = self.getStartAngle()
+        self.background = self.generateCircleCourse()
+        self.car = CarCamera(self.background)
         firstImage = self.car.getCarView(self.firstPoint, self.angle)
 
         return firstImage
@@ -179,7 +166,18 @@ class simulation:
         self.firstPoint = self.calculateNextPoint(self.firstPoint, self.angle)
         self.crash = self.checkBoundary(self.firstPoint, self.background, self.angle)
 
-        #TODO make correct return type
+        # TODO make correct return type
+
+    def getStartLocation(self):
+        path = self.courses[self.course_index % len(self.courses)]
+        position = (path / "position.txt").read_text().split(" ")
+        return (int(position[0]),int(position[1]))
+
+    def getStartAngle(self):
+        path = self.courses[self.course_index % len(self.courses)]
+        angles = (path / "angle.txt").read_text().split(" ")
+        return int(random.choice(angles))
+
 
 
 if __name__ == "__main__":
