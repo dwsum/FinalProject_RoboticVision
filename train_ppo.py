@@ -2,6 +2,9 @@
 # Drew Sumsion is writing this and acknowledging the help and gratitude for offering this code for me to build off of.
 
 #Note, this was originally in colab. So, if you want to run each section at a time I have put in this where it requires user input to move to next section. I called it "colabMode"
+from datetime import datetime
+from pathlib import Path
+
 from simulation import simulation
 
 colabMode = False
@@ -92,8 +95,13 @@ def learn_ppo(optim, policy, value, memory_dataloader, epsilon, policy_epochs):
           epsilon (float): trust region
           policy_epochs (int): number of times to iterate over all memory
     """
+    epoch_cntr = 0
     for epoch in range(0, policy_epochs):
+        cntr = 0
+        epoch_cntr += 1
         for state, action, action_dist, theReturn in memory_dataloader:
+            cntr += 1
+            print("counter", epoch_cntr, cntr)
             optim.zero_grad()
 
             # first set ups
@@ -111,7 +119,7 @@ def learn_ppo(optim, policy, value, memory_dataloader, epsilon, policy_epochs):
             advantage = advantage.detach()
 
             # policy loss
-            encoded = nn.functional.one_hot(action).bool()
+            encoded = nn.functional.one_hot(action, num_classes=policy(state).shape[1]).bool()
             policy_ratio = policy(state)[encoded] / action_dist.squeeze()[encoded]
 
             # prevent overfitting
@@ -203,7 +211,8 @@ if colabMode:
 def ppo_main():
     # Hyper parameters
     lr = 1e-3
-    epochs = 20
+    epochs = 500
+    saveEvery_epochs = 100
     env_samples = 100
     gamma = 0.9
     batch_size = 256
@@ -221,6 +230,8 @@ def ppo_main():
 
     # Init optimizer
     optim = torch.optim.Adam(chain(policy_network.parameters(), value_network.parameters()), lr=lr)
+
+    savePath = None
 
     # Start main loop
     results_ppo = []
@@ -240,7 +251,7 @@ def ppo_main():
             cum_reward = 0  # Track cumulative reward
 
             # Begin episode
-            while not done and cum_reward < 200:  # End after 200 steps
+            while not done and cum_reward < 750:  # End after 20000 steps
                 # Get action
                 action, action_dist = get_action_ppo(policy_network, state)
 
@@ -261,7 +272,7 @@ def ppo_main():
 
         # Train
         dataset = RLDataset(memory)
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
         learn_ppo(optim, policy_network, value_network, loader, epsilon, policy_epochs)
 
         # Print results
@@ -269,12 +280,34 @@ def ppo_main():
         loop.update(1)
         loop.set_description("Epochs: {} Reward: {}".format(epoch, results_ppo[-1]))
 
+        if not (epoch % saveEvery_epochs):
+            if savePath is None:
+                savePath = Path("./Results")
+                savePath.mkdir(exist_ok=True)
+                # create directory to save in
+                saveDir = str(datetime.now())
+                saveDir = saveDir.replace(" ", "__")
+                saveDir = saveDir.replace("-", "_")
+                saveDir = saveDir.replace(":", "_")
+                saveDir = saveDir.replace(".", "_")
+                savePath = savePath / Path(saveDir)
+                savePath.mkdir()
+
+            policyPath = savePath / ("policy_epoch_" + str(epoch) + ".pt")
+            valuePath = savePath / ("value_epoch_" + str(epoch) + ".pt")
+            plotPath = savePath / ("plot_epoch_" + str(epoch) + ".png")
+
+            torch.save(policy_network.state_dict(), str(policyPath))
+            torch.save(value_network.state_dict(), str(valuePath))
+
+            plt.plot(results_ppo)
+            plt.xlabel("Epoch")
+            plt.ylabel("Reward")
+            # plt.show()
+            plt.savefig(plotPath)
+
     return results_ppo
 
 
 results_ppo = ppo_main()
 
-plt.plot(results_ppo)
-plt.xlabel("Epoch")
-plt.ylabel("Reward")
-plt.show()

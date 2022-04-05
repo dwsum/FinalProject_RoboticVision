@@ -70,7 +70,6 @@ class simulation:
         xChange = int(math.sin(angle * 2 * math.pi / 360) * self.speedMovePixels)
         yChange = int(math.cos(angle * 2 * math.pi / 360) * self.speedMovePixels)
 
-        print("angle", angle, "xchange", xChange, "ychange", yChange)
         return xChange, yChange
 
 
@@ -111,7 +110,6 @@ class simulation:
             else:
                 angle = angle
         else:
-            print("network choice", programChoice)
             angle = angle + programChoice
 
         return angle
@@ -126,11 +124,7 @@ class simulation:
         # firstPoint = (point[0] - int(self.carSize / 2), point[1] - int(self.carSize / 2))
         # secondPoint = (point[0] + int(self.carSize / 2), point[1] + int(self.carSize / 2))
 
-        print(course[firstPoint])
-        print(course[secondPoint])
-
         if course[firstPoint] or course[secondPoint]:
-            print("CRASH!!!")
             return True
 
         return False
@@ -159,7 +153,8 @@ class simulation:
 
         #down size to 15 x 15
         nextImage = cv.resize(nextImage, (15, 15), interpolation=cv.INTER_AREA)
-        #TODO insert changing dimensions to be the right size for the network...
+
+        # insert changing dimensions to be the right size for the network
         nextImage = nextImage.flatten()
 
         return nextImage
@@ -172,7 +167,6 @@ class simulation:
         self.theCourse = self.generateCircleCourse(mask=False)
         self.angle = -30
         firstImage = self.getCarImage()
-
 
         return firstImage
 
@@ -187,8 +181,6 @@ class simulation:
         self.firstPoint = self.calculateNextPoint(self.firstPoint, self.angle)
         self.crash = self.checkBoundary(self.firstPoint, self.background, self.angle)
 
-        #TODO make correct return type
-
         nextImage = self.getCarImage()
 
         if not self.crash:
@@ -202,8 +194,7 @@ class simulation:
                 #reward for not crashing
                 reward = 1
         else:
-            #TODO check if this is a valid reward type. Want bad for crashing.
-            reward = -10000
+            reward = -3
 
         return nextImage, reward, (self.crash), None
 
