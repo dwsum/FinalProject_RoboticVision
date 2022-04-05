@@ -35,7 +35,7 @@ class CarCamera:
 
         carView = cv.warpPerspective(carViewUnwarped, self.Minv, (self.IMAGE_W, self.IMAGE_H))  # Image warping
         carViewFilledUp = self.fill(carView)
-        return carView
+        return carViewFilledUp
 
     def getCarMask(self,point,angle):
         pts = np.array(
