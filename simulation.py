@@ -158,7 +158,7 @@ class simulation:
         return firstImage
 
     def step(self, action):
-        self.drawPoint(self.firstPoint, self.angle, self.prevPoint, self.prevAngle, self.theCourse)
+        # self.drawPoint(self.firstPoint, self.angle, self.prevPoint, self.prevAngle, self.theCourse)
 
         self.prevPoint = self.firstPoint
         self.prevAngle = self.angle
