@@ -80,7 +80,7 @@ def get_action_ppo(network, state):
     # run the state through the network
     state_tensor = torch.Tensor([state]).to(device)
     action_dist = network(state_tensor)
-
+    action_dist = action_dist.squeeze(0)
     # now we pick one action from the action distribution
     action = torch.multinomial(action_dist, 1).item()
 
@@ -160,16 +160,24 @@ class PolicyNetwork(nn.Module):
     def __init__(self, state_size, action_size):
         super().__init__()
         hidden_size = 450#8
-
+        self.hidden_size = hidden_size
+        self.action_size = action_size
         self.net = nn.Sequential(nn.Linear(state_size, hidden_size),
                                  nn.ReLU(),
                                  nn.Linear(hidden_size, hidden_size),
                                  nn.ReLU(),
                                  nn.Linear(hidden_size, hidden_size),
                                  nn.ReLU(),
-                                 nn.Linear(hidden_size, action_size),
-                                 nn.Softmax(dim=1))
+                                 nn.Linear(hidden_size, hidden_size))
+        self.rnn = nn.GRU(input_size=hidden_size, hidden_size=action_size,
+                             num_layers=1, batch_first=False, bidirectional=False)
+        self.soft = nn.Softmax(dim=1)
+        self.h_en = torch.zeros(
+            (1, 1, self.action_size), device=device)
 
+    def reset(self):
+        self.h_en = torch.zeros(
+            (1, 1, self.action_size), device=device)
     def forward(self, x):
         """Get policy from state
 
@@ -179,7 +187,12 @@ class PolicyNetwork(nn.Module):
           Returns:
               action_dist (tensor): probability distribution over actions (batch x action_size)
         """
-        return self.net(x)
+        linear_out = self.net(x)
+        linear_out = torch.unsqueeze(linear_out,0)
+        print(linear_out.shape)
+        rnn_out, h_n = self.rnn(linear_out,self.h_en)
+        self.h_en = h_n
+        return self.soft(rnn_out)
 
 
 # Value Network
@@ -216,7 +229,7 @@ def ppo_main():
     lr = 1e-4
     epochs = 500#50
     saveEvery_epochs = 50
-    env_samples = 3#20#30#100
+    env_samples = 30#100
     gamma = 0.9
     batch_size = 256
     epsilon = 0.2
@@ -225,7 +238,7 @@ def ppo_main():
     # Init environment
     state_size = 225#4
     action_size = 60#2
-    env = carInstance()#simulation()#gym.make('CartPole-v1')
+    env = simulation()#gym.make('CartPole-v1')
 
     # Init networks
     policy_network = PolicyNetwork(state_size, action_size).to(device)
@@ -261,7 +274,8 @@ def ppo_main():
                 # Take step
                 next_state, reward, done, _ = env.step(action)
                 # env.render()
-
+                if done:
+                    policy_network.reset()
                 # Store step
                 rollout.append((state, action, action_dist, reward))
 
@@ -277,7 +291,7 @@ def ppo_main():
         dataset = RLDataset(memory)
         loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
         learn_ppo(optim, policy_network, value_network, loader, epsilon, policy_epochs)
-
+        policy_network.reset()
         # Print results
         results_ppo.extend(rewards)  # Store rewards for this epoch
         loop.update(1)
