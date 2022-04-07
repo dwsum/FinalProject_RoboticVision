@@ -189,7 +189,9 @@ class PolicyNetwork(nn.Module):
         """
         linear_out = self.net(x)
         linear_out = torch.unsqueeze(linear_out,0)
-        print(linear_out.shape)
+        if linear_out.shape[1] != 1:
+            self.h_en = torch.zeros(
+                (1, linear_out.shape[1], self.action_size), device=device)
         rnn_out, h_n = self.rnn(linear_out,self.h_en)
         self.h_en = h_n
         return self.soft(rnn_out)
