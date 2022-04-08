@@ -212,10 +212,10 @@ if colabMode:
 
 def ppo_main():
     # Hyper parameters
-    lr = 1e-4
-    epochs = 500
+    lr = 1e-5
+    epochs = 100
     saveEvery_epochs = 1
-    env_samples = 30#100
+    env_samples = 10
     gamma = 0.9
     batch_size = 256
     epsilon = 0.2

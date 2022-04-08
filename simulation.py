@@ -170,16 +170,15 @@ class simulation:
         nextImage = self.getCarImage()
 
         if not self.crash:
-            reward = 1
-            # if abs(networkChoiceAngle) < 5:
-            #     #reward for turning less than 5
-            #     reward = 3
-            # elif abs(networkChoiceAngle) < 10:
-            #     #reward for only turning 10
-            #     reward = 2
-            # else:
-            #     #reward for not crashing
-            #     reward = 1
+            if abs(networkChoiceAngle) < 5:
+                #reward for turning less than 5
+                reward = 3
+            elif abs(networkChoiceAngle) < 10:
+                #reward for only turning 10
+                reward = 2
+            else:
+                #reward for not crashing
+                reward = 1
         else:
             reward = -3
 
