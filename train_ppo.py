@@ -232,7 +232,7 @@ def ppo_main():
     value_network = ValueNetwork(state_size).to(device)
 
     #load parameters
-    policy_network.load_state_dict(torch.load("./models/shad_other/policy_epoch_99.pt", map_location=torch.device(device)))
+    policy_network.load_state_dict(torch.load("./Results/2022_04_08__09_14_01_905452/policy_epoch_58.pt", map_location=torch.device(device)))
 
     # Init optimizer
     optim = torch.optim.Adam(chain(policy_network.parameters(), value_network.parameters()), lr=lr)
