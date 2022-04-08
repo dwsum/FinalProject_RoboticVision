@@ -214,7 +214,7 @@ if colabMode:
 def ppo_main():
     # Hyper parameters
     lr = 1e-4
-    epochs = 20#50
+    epochs = 50
     saveEvery_epochs = 2
     env_samples = 30#20#30#100
     gamma = 0.9

@@ -5,15 +5,15 @@ import cv2.cv2 as cv
 
 class CarCamera:
     def __init__(self,background):
-        self.IMAGE_H =  480
-        self.IMAGE_W = 640
+        self.IMAGE_H =  640#480#700#480
+        self.IMAGE_W = 640#800#640
         self.background = background
         src = np.float32([[0, self.IMAGE_H], [self.IMAGE_W, self.IMAGE_H], [0, 0], [self.IMAGE_W, 0]])
         dst = np.float32([[284, self.IMAGE_H], [355, self.IMAGE_H], [0, 0], [self.IMAGE_W, 0]])
         self.Minv = cv.getPerspectiveTransform(dst, src)  # Inverse transformation
         self.bottom_x_offset = 35
-        self.top_x_offset = 320
-        self.top_y_offset = 480
+        self.top_x_offset = int(self.IMAGE_W/2)#200#320
+        self.top_y_offset = self.IMAGE_H#800#680#480
 
     def rotatePoint(self, origin, point, angle):
         """
