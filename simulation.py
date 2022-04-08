@@ -7,6 +7,9 @@ import numpy as np
 from carCamera import CarCamera
 import random
 
+from findCourse import findCourse
+
+
 class simulation:
     def __init__(self):
         self.xSize = 1000
@@ -17,7 +20,8 @@ class simulation:
         self.lineColor = (255, 255, 255)
         self.edgeBufferSize = 100
         self.trackWidth = 200
-
+        self.findCourses = findCourse()
+        self.prev_start = None
         # draw
         self.carColor = (255, 0, 0)
         self.carThickness = 5
@@ -28,6 +32,7 @@ class simulation:
         self.changeAngle = 5
         self.courses = list(Path("prepared_courses").iterdir())
         self.course_index = 0
+        self.camera = cv.VideoCapture(0)
 
     # NOTE!!!! If you wish to create new courses, but still use simulation. Just follow 3 step guide below.
     def generateCircleCourse(self):
@@ -113,25 +118,34 @@ class simulation:
     def race(self):
         while True:
             crash = False
-            firstPoint = self.getStartLocation()
             prevPoint = None
             prevAngle = None
-            theCourse = self.generateCircleCourse()
             angle = self.getStartAngle()
-            self.background = self.generateCircleCourse()
-
+            self.background = self.getCourse()
+            firstPoint = self.getStartLocation()
             self.car = CarCamera(self.background)
 
             while not crash:
-                self.drawPoint(firstPoint, angle, prevPoint, prevAngle, theCourse)
+                self.background = self.getCourse()
+                self.theCourse = self.background.copy()
+                self.drawPoint(firstPoint, angle, prevPoint, prevAngle, self.theCourse)
 
                 prevPoint = firstPoint
                 prevAngle = angle
                 # get next points
                 angle = self.getAngle(angle)
                 firstPoint = self.calculateNextPoint(firstPoint, angle)
+
+                self.car.update_background(self.background)
                 crash = self.checkBoundary(firstPoint, self.background, angle)
             self.course_index +=1
+    def getCourse(self):
+        ret, image = self.camera.read()
+        image =  self.findCourses.findTrack_oneFrame(image)
+        image = cv.resize(image,(int(image.shape[1]*2),int(image.shape[0]*2)))
+        return image
+
+
 
     def getCarImage(self):
         nextImage = self.car.getCarView(self.firstPoint, self.angle)
@@ -144,20 +158,41 @@ class simulation:
 
         return nextImage
 
+    def findStartingPositions(self):
+        min_row_val = 5000000000
+        min_row_idx = -1
+        for i,row in enumerate(self.background):
+            if sum(row)<min_row_val:
+                min_row_val = sum(row)
+                min_row_idx = i
+        try:
+            columns = np.where(self.background[min_row_idx]==0)
+            column_index = columns[0][int(len(columns[0])/2)]
+            rows = np.where(self.background[min_row_idx-100:min_row_idx+100,column_index] ==0)
+
+            min_row_idx = rows[0][int(len(rows[0]) / 2)] + min_row_idx-100
+        except:
+            return self.prev_start
+        self.prev_start = column_index, min_row_idx
+        return column_index,min_row_idx
+
     def reset(self):
         self.crash = False
         self.course_index += 1
-        self.firstPoint = self.getStartLocation()
         self.prevPoint = None
         self.prevAngle = None
-        self.theCourse = self.generateCircleCourse()
-        self.angle = self.getStartAngle()
-        self.background = self.generateCircleCourse()
+        self.background = self.getCourse()
+        self.theCourse = self.background.copy()
+        self.angle = 90
         self.car = CarCamera(self.background)
+        self.firstPoint = self.getStartLocation()
+        print(self.firstPoint)
         firstImage = self.getCarImage()
         return firstImage
 
     def step(self, action):
+        self.background = self.getCourse()
+        self.theCourse = self.background.copy()
         self.drawPoint(self.firstPoint, self.angle, self.prevPoint, self.prevAngle, self.theCourse)
 
         self.prevPoint = self.firstPoint
@@ -186,9 +221,7 @@ class simulation:
 
 
     def getStartLocation(self):
-        path = self.courses[self.course_index % len(self.courses)]
-        position = (path / "position.txt").read_text().split(" ")
-        return (int(position[0]), int(position[1]))
+       return self.findStartingPositions()
 
 
     def getStartAngle(self):

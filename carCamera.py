@@ -14,7 +14,8 @@ class CarCamera:
         self.bottom_x_offset = 35
         self.top_x_offset = 320
         self.top_y_offset = 480
-
+    def update_background(self,background):
+        self.background = background
     def rotatePoint(self, origin, point, angle):
         """
         Rotate a point counterclockwise by a given angle around a given origin.
@@ -55,6 +56,7 @@ class CarCamera:
     def rotateAndCropMask(self, carViewMask, point, angle):
         carView = cv.bitwise_and(carViewMask, self.background)
         image_center = point
+        image_center = np.array(image_center,dtype=np.float32)
         rot_mat = cv.getRotationMatrix2D(image_center, -angle + 180, 1.0)
         carViewRotated = cv.warpAffine(carView, rot_mat, carView.shape[1::-1], flags=cv.INTER_LINEAR)
         yminAct = point[1] - self.top_y_offset
@@ -63,9 +65,10 @@ class CarCamera:
         xminAct = point[0] - self.top_x_offset
         xmin = max(xminAct, 0)
         xmax = point[0] + self.top_x_offset
-
         carViewRotatedCropped =  carViewRotated[ymin:ymax, xmin:xmax]
         carView = np.zeros((self.IMAGE_H, self.IMAGE_W))
+        if 0 in list(carViewRotatedCropped.shape):
+            return carView
         x_start = 0
         y_start = 0
         x_end = carViewRotatedCropped.shape[1]
@@ -78,7 +81,10 @@ class CarCamera:
         if xminAct < 0:
             x_start = abs(xminAct)
             x_end += abs(xminAct)
-        carView[y_start:y_end, x_start:x_end] = carViewRotatedCropped
+        try:
+            carView[y_start:y_end, x_start:x_end] = carViewRotatedCropped
+        except:
+            pass
         return carView
 
     def fill(self, carView):

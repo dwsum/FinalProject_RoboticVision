@@ -212,10 +212,10 @@ if colabMode:
 
 def ppo_main():
     # Hyper parameters
-    lr = 1e-5
+    lr = 1e-6
     epochs = 100
     saveEvery_epochs = 1
-    env_samples = 10
+    env_samples = 100
     gamma = 0.9
     batch_size = 256
     epsilon = 0.2
@@ -228,6 +228,9 @@ def ppo_main():
 
     # Init networks
     policy_network = PolicyNetwork(state_size, action_size).to(device)
+    policy_network.load_state_dict(
+        torch.load("policy_epoch_99.pt",
+                   map_location=device))
     value_network = ValueNetwork(state_size).to(device)
 
     # Init optimizer
@@ -253,7 +256,7 @@ def ppo_main():
             cum_reward = 0  # Track cumulative reward
 
             # Begin episode
-            while not done and cum_reward < 750:  # End after 20000 steps
+            while not done and cum_reward < 3000:  # End after 20000 steps
                 # Get action
                 action, action_dist = get_action_ppo(policy_network, state)
 
