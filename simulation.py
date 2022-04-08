@@ -29,6 +29,9 @@ class simulation:
         self.courses = list(Path("prepared_courses").iterdir())
         self.course_index = 0
 
+        self.prevSteerCol = None
+        self.prevAngle_2 = None
+
     # NOTE!!!! If you wish to create new courses, but still use simulation. Just follow 3 step guide below.
     def generateCircleCourse(self):
         path = self.courses[self.course_index % len(self.courses)]
@@ -134,15 +137,15 @@ class simulation:
             self.course_index +=1
 
     def getCarImage(self):
-        nextImage = self.car.getCarView(self.firstPoint, self.angle)
+        nextImage_orig = self.car.getCarView(self.firstPoint, self.angle)
 
         #down size to 15 x 15
-        nextImage = cv.resize(nextImage, (15, 15), interpolation=cv.INTER_AREA)
+        nextImage_orig = cv.resize(nextImage_orig, (15, 15), interpolation=cv.INTER_AREA)
 
         # insert changing dimensions to be the right size for the network
-        nextImage = nextImage.flatten()
+        nextImage = nextImage_orig.flatten()
 
-        return nextImage
+        return nextImage, nextImage_orig
 
     def reset(self):
         self.crash = False
@@ -154,10 +157,73 @@ class simulation:
         self.angle = self.getStartAngle()
         self.background = self.generateCircleCourse()
         self.car = CarCamera(self.background)
-        firstImage = self.getCarImage()
+        firstImage, actualImage = self.getCarImage()
+
+        self.prevSteerCol = None
+        self.prevAngle = None
+        self.prevImage = actualImage
         return firstImage
 
+    def getHandPickedAnswer(self, downsamplemasked_obstacles):
+        numCols = 15
+        numRows = 15
+
+
+        colWeights = np.full((numCols), 1.0)
+        if self.prevSteerCol is not None:
+            colWeights[self.prevSteerCol - 1] = .8
+        rowWeights = np.linspace(0.0, 2.0, numRows) ** 3
+        weightMatrix = np.outer(rowWeights, colWeights)
+
+        steeringMatrix = ((downsamplemasked_obstacles.astype(float) * 1) * weightMatrix).astype(int)
+        weightedCols = np.sum(steeringMatrix, axis=0)
+
+        useRows = 2
+        cutOffEachSide_columns = 7
+        shiftAmount = 1
+        if self.prevAngle_2 is not None:
+            if self.prevAngle_2 < -10:
+                shiftAmount = -shiftAmount
+                useRows = useRows - 1
+            elif self.prevAngle_2 > 10:
+                shiftAmount = shiftAmount
+                useRows = useRows - 1
+            else:
+                shiftAmount = 0
+        else:
+            shiftAmount = 0
+        cropped = steeringMatrix[numRows - useRows:,
+                  cutOffEachSide_columns + shiftAmount:numCols - cutOffEachSide_columns + shiftAmount]
+        brakeBox = np.sum(cropped)
+        if brakeBox == 0:
+            brake = False
+        else:
+            brake = True
+        N = int(numCols / 4)
+        weightedCols = np.sum(steeringMatrix, axis=0)
+        moving_average = np.convolve(weightedCols, np.ones(N) / N, mode='valid')
+
+        lowest_added = np.partition(moving_average, 1)[1]  # np.argmin(moving_average) +N
+        lowest = np.where(moving_average == lowest_added)[0][0] + N
+
+        lowestRow = steeringMatrix[:, lowest - 1]
+        strength = 0
+        for i in reversed(range(numCols)):
+            if lowestRow[i]:
+                strength = i
+                break
+        steerDirection = ((lowest / (numCols - 1)) - 0.5) * 2.0 * 30
+        speed = (strength / numCols) * 4.0
+        steerDirection *= (strength / numCols) * 1.25
+
+        self.prevSteerCol = lowest
+        self.prevAngle_2 = steerDirection
+
+        return steerDirection
+
     def step(self, action):
+        handPicked = self.getHandPickedAnswer(self.prevImage)
+
         self.drawPoint(self.firstPoint, self.angle, self.prevPoint, self.prevAngle, self.theCourse)
 
         self.prevPoint = self.firstPoint
@@ -167,17 +233,26 @@ class simulation:
         self.angle = self.getAngle(self.angle, networkChoiceAngle)
         self.firstPoint = self.calculateNextPoint(self.firstPoint, self.angle)
         self.crash = self.checkBoundary(self.firstPoint, self.background, self.angle)
-        nextImage = self.getCarImage()
+        nextImage, actualImage = self.getCarImage()
 
+        self.prevImage = actualImage
         if not self.crash:
-            if abs(networkChoiceAngle) < 5:
-                #reward for turning less than 5
+            # if abs(networkChoiceAngle) < 5:
+            #     #reward for turning less than 5
+            #     reward = 3
+            # elif abs(networkChoiceAngle) < 10:
+            #     #reward for only turning 10
+            #     reward = 2
+            # else:
+            #     #reward for not crashing
+            #     reward = 1
+            diff = handPicked - action
+
+            if diff < 1:
                 reward = 3
-            elif abs(networkChoiceAngle) < 10:
-                #reward for only turning 10
+            elif diff < 5:
                 reward = 2
             else:
-                #reward for not crashing
                 reward = 1
         else:
             reward = -3

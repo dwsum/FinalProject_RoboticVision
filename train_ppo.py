@@ -214,9 +214,9 @@ if colabMode:
 def ppo_main():
     # Hyper parameters
     lr = 1e-4
-    epochs = 500#50
-    saveEvery_epochs = 50
-    env_samples = 3#20#30#100
+    epochs = 20#50
+    saveEvery_epochs = 2
+    env_samples = 30#20#30#100
     gamma = 0.9
     batch_size = 256
     epsilon = 0.2
@@ -225,7 +225,7 @@ def ppo_main():
     # Init environment
     state_size = 225#4
     action_size = 60#2
-    env = carInstance()#simulation()#gym.make('CartPole-v1')
+    env = simulation()#gym.make('CartPole-v1')
 
     # Init networks
     policy_network = PolicyNetwork(state_size, action_size).to(device)
