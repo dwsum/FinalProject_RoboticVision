@@ -215,7 +215,7 @@ def ppo_main():
     # Hyper parameters
     lr = 1e-4
     epochs = 500#50
-    saveEvery_epochs = 50
+    saveEvery_epochs = 2
     env_samples = 3#20#30#100
     gamma = 0.9
     batch_size = 256
@@ -230,6 +230,9 @@ def ppo_main():
     # Init networks
     policy_network = PolicyNetwork(state_size, action_size).to(device)
     value_network = ValueNetwork(state_size).to(device)
+
+    #load parameters
+    policy_network.load_state_dict(torch.load("./models/shad_other/policy_epoch_99.pt", map_location=torch.device(device)))
 
     # Init optimizer
     optim = torch.optim.Adam(chain(policy_network.parameters(), value_network.parameters()), lr=lr)
