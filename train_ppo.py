@@ -167,6 +167,14 @@ class PolicyNetwork(nn.Module):
                                  nn.ReLU(),
                                  nn.Linear(hidden_size, hidden_size),
                                  nn.ReLU(),
+                                 nn.Linear(hidden_size, hidden_size),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_size, hidden_size),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_size, hidden_size),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_size, hidden_size),
+                                 nn.ReLU(),
                                  nn.Linear(hidden_size, action_size),
                                  nn.Softmax(dim=1))
 
@@ -214,7 +222,7 @@ if colabMode:
 def ppo_main():
     # Hyper parameters
     lr = 1e-4
-    epochs = 50
+    epochs = 250
     saveEvery_epochs = 2
     env_samples = 30#20#30#100
     gamma = 0.9

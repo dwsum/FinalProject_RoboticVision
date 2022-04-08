@@ -5,7 +5,7 @@ import cv2.cv2 as cv
 
 class CarCamera:
     def __init__(self,background):
-        self.IMAGE_H =  640#480#700#480
+        self.IMAGE_H =  840#480#700#480
         self.IMAGE_W = 640#800#640
         self.background = background
         src = np.float32([[0, self.IMAGE_H], [self.IMAGE_W, self.IMAGE_H], [0, 0], [self.IMAGE_W, 0]])

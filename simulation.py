@@ -245,7 +245,7 @@ class simulation:
                 reward = 2
             else:
                 #reward for not crashing
-                reward = 1
+                reward = -1
             diff = handPicked - action
 
             if diff < 1:
