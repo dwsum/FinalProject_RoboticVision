@@ -99,6 +99,7 @@ def learn_ppo(optim, policy, value, memory_dataloader, epsilon, policy_epochs):
           epsilon (float): trust region
           policy_epochs (int): number of times to iterate over all memory
     """
+    policy.reset()
     epoch_cntr = 0
     for epoch in range(0, policy_epochs):
         cntr = 0
@@ -184,7 +185,7 @@ class PolicyNetwork(nn.Module):
         """
         x = torch.unsqueeze(x, 0)
         if self.previous_last_layer is None:
-            batchSize = x.shape[0]
+            batchSize = x.shape[1]
             last_layer_shape = (self.D * self.n_layers, batchSize, self.hidden_size)
             self.previous_last_layer = torch.zeros(last_layer_shape)
 
@@ -271,6 +272,8 @@ def ppo_main():
 
             # Begin episode
             while not done and cum_reward < 3000:  # End after 20000 steps
+                policy_network.reset()
+
                 # Get action
                 action, action_dist = get_action_ppo(policy_network, state)
 

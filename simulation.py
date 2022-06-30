@@ -77,10 +77,10 @@ class simulation:
         self.centerToPoint(nextPoint, angle, theCourse, self.carColor)
         # drawHelper(nextPoint, self.carColor)
 
-        cv.imshow("theCourse", theCourse)
+        # cv.imshow("theCourse", theCourse)
         carView = self.car.getCarView(nextPoint, angle)
-        cv.imshow("car view", carView)
-        cv.waitKey(1)
+        # cv.imshow("car view", carView)
+        # cv.waitKey(1)
 
     def getAngle(self, angle, programChoice=None):
         if programChoice == None:
