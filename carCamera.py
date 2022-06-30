@@ -1,7 +1,7 @@
 import math
 
 import numpy as np
-import cv2.cv2 as cv
+import cv2 as cv
 
 class CarCamera:
     def __init__(self,background):

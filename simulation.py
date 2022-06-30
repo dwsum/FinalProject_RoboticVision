@@ -32,7 +32,7 @@ class simulation:
         self.changeAngle = 5
         self.courses = list(Path("prepared_courses").iterdir())
         self.course_index = 0
-        self.camera = cv.VideoCapture(0)
+        # self.camera = cv.VideoCapture(0)
 
     # NOTE!!!! If you wish to create new courses, but still use simulation. Just follow 3 step guide below.
     def generateCircleCourse(self):
@@ -121,12 +121,12 @@ class simulation:
             prevPoint = None
             prevAngle = None
             angle = self.getStartAngle()
-            self.background = self.getCourse()
+            self.background = self.generateCircleCourse()
             firstPoint = self.getStartLocation()
             self.car = CarCamera(self.background)
 
             while not crash:
-                self.background = self.getCourse()
+                self.background = self.generateCircleCourse()
                 self.theCourse = self.background.copy()
                 self.drawPoint(firstPoint, angle, prevPoint, prevAngle, self.theCourse)
 
@@ -181,7 +181,7 @@ class simulation:
         self.course_index += 1
         self.prevPoint = None
         self.prevAngle = None
-        self.background = self.getCourse()
+        self.background = self.generateCircleCourse()
         self.theCourse = self.background.copy()
         self.angle = 90
         self.car = CarCamera(self.background)
@@ -191,7 +191,7 @@ class simulation:
         return firstImage
 
     def step(self, action):
-        self.background = self.getCourse()
+        self.background = self.generateCircleCourse()
         self.theCourse = self.background.copy()
         self.drawPoint(self.firstPoint, self.angle, self.prevPoint, self.prevAngle, self.theCourse)
 

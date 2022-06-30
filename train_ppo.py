@@ -228,9 +228,9 @@ def ppo_main():
 
     # Init networks
     policy_network = PolicyNetwork(state_size, action_size).to(device)
-    policy_network.load_state_dict(
-        torch.load("policy_epoch_99.pt",
-                   map_location=device))
+    # policy_network.load_state_dict(
+    #     torch.load("policy_epoch_99.pt",
+    #                map_location=device))
     value_network = ValueNetwork(state_size).to(device)
 
     # Init optimizer
