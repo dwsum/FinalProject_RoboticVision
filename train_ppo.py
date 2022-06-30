@@ -81,7 +81,8 @@ def get_action_ppo(network, state):
     action_dist = network(state_tensor)
 
     # now we pick one action from the action distribution
-    action = torch.multinomial(action_dist, 1).item()
+    # action = torch.multinomial(action_dist, 1).item()
+    action = torch.argmax(action_dist, 1).item()
 
     return action, action_dist
 
@@ -134,6 +135,7 @@ def learn_ppo(optim, policy, value, memory_dataloader, epsilon, policy_epochs):
             # normal dep learning things
             loss.backward()
             optim.step()
+            policy.reset()
 
 if colabMode:
     print("About to start Modules")
@@ -158,16 +160,18 @@ class RLDataset(Dataset):
 class PolicyNetwork(nn.Module):
     def __init__(self, state_size, action_size):
         super().__init__()
-        hidden_size = 450#8
+        self.hidden_size = 450#8
+        self.n_layers = 2
+        bidirectional = False
+        self.D = 1 #Note, this must be 2 if bidirectional=True or 1 if bidirectional=False
 
-        self.net = nn.Sequential(nn.Linear(state_size, hidden_size),
-                                 nn.ReLU(),
-                                 nn.Linear(hidden_size, hidden_size),
-                                 nn.ReLU(),
-                                 nn.Linear(hidden_size, hidden_size),
-                                 nn.ReLU(),
-                                 nn.Linear(hidden_size, action_size),
-                                 nn.Softmax(dim=1))
+        self.net = nn.GRU(input_size=state_size, hidden_size=self.hidden_size, num_layers=self.n_layers, batch_first=False, bidirectional=bidirectional)
+        self.linear1 = nn.Linear(self.hidden_size, action_size)
+
+        self.reset()
+
+    def reset(self):
+        self.previous_last_layer = None
 
     def forward(self, x):
         """Get policy from state
@@ -178,7 +182,17 @@ class PolicyNetwork(nn.Module):
           Returns:
               action_dist (tensor): probability distribution over actions (batch x action_size)
         """
-        return self.net(x)
+        x = torch.unsqueeze(x, 0)
+        if self.previous_last_layer is None:
+            batchSize = x.shape[0]
+            last_layer_shape = (self.D * self.n_layers, batchSize, self.hidden_size)
+            self.previous_last_layer = torch.zeros(last_layer_shape)
+
+        output, gru_final_layer = self.net(x, self.previous_last_layer)
+        self.previous_last_layer = gru_final_layer
+        linear_out = self.linear1(gru_final_layer[-1])
+        lin_out_norm = nn.functional.normalize(linear_out, dim=1)#torch.unsqueeze(linear_out, 0))
+        return lin_out_norm
 
 
 # Value Network
@@ -278,6 +292,7 @@ def ppo_main():
         # Train
         dataset = RLDataset(memory)
         loader = DataLoader(dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+        policy_network.reset()
         learn_ppo(optim, policy_network, value_network, loader, epsilon, policy_epochs)
 
         # Print results

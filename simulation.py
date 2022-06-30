@@ -186,7 +186,7 @@ class simulation:
         self.angle = 90
         self.car = CarCamera(self.background)
         self.firstPoint = self.getStartLocation()
-        print(self.firstPoint)
+        # print(self.firstPoint)
         firstImage = self.getCarImage()
         return firstImage
 
