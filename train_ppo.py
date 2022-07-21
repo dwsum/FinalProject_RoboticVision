@@ -227,9 +227,9 @@ if colabMode:
 
 def ppo_main():
     # Hyper parameters
-    lr = 1e-6
-    epochs = 100
-    saveEvery_epochs = 1
+    lr = 1e-3#1e-6
+    epochs = 1000
+    saveEvery_epochs = 10
     env_samples = 100
     gamma = 0.9
     batch_size = 256
@@ -251,7 +251,9 @@ def ppo_main():
     # Init optimizer
     optim = torch.optim.Adam(chain(policy_network.parameters(), value_network.parameters()), lr=lr)
 
-    savePath = None
+    here = Path(__file__).resolve()
+    savePath = Path(here.parent.parent.parent / "compute" / "ppo_results")
+    savePath.mkdir(exist_ok=True)
 
     # Start main loop
     results_ppo = []
@@ -307,14 +309,15 @@ def ppo_main():
             if savePath is None:
                 savePath = Path("./Results")
                 savePath.mkdir(exist_ok=True)
-                # create directory to save in
-                saveDir = str(datetime.now())
-                saveDir = saveDir.replace(" ", "__")
-                saveDir = saveDir.replace("-", "_")
-                saveDir = saveDir.replace(":", "_")
-                saveDir = saveDir.replace(".", "_")
-                savePath = savePath / Path(saveDir)
-                savePath.mkdir()
+
+            # create directory to save in
+            saveDir = str(datetime.now())
+            saveDir = saveDir.replace(" ", "__")
+            saveDir = saveDir.replace("-", "_")
+            saveDir = saveDir.replace(":", "_")
+            saveDir = saveDir.replace(".", "_")
+            savePath = savePath / Path(saveDir)
+            savePath.mkdir()
 
             policyPath = savePath / ("policy_epoch_" + str(epoch) + ".pt")
             valuePath = savePath / ("value_epoch_" + str(epoch) + ".pt")
