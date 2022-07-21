@@ -258,6 +258,16 @@ def ppo_main():
     # Start main loop
     results_ppo = []
     loop = tqdm(total=epochs, position=0, leave=False)
+
+    # create directory to save in
+    saveDir = str(datetime.now())
+    saveDir = saveDir.replace(" ", "__")
+    saveDir = saveDir.replace("-", "_")
+    saveDir = saveDir.replace(":", "_")
+    saveDir = saveDir.replace(".", "_")
+    savePath = savePath / Path(saveDir)
+    savePath.mkdir()
+
     for epoch in range(epochs):
 
         memory = []  # Reset memory every epoch
@@ -309,15 +319,6 @@ def ppo_main():
             if savePath is None:
                 savePath = Path("./Results")
                 savePath.mkdir(exist_ok=True)
-
-            # create directory to save in
-            saveDir = str(datetime.now())
-            saveDir = saveDir.replace(" ", "__")
-            saveDir = saveDir.replace("-", "_")
-            saveDir = saveDir.replace(":", "_")
-            saveDir = saveDir.replace(".", "_")
-            savePath = savePath / Path(saveDir)
-            savePath.mkdir()
 
             policyPath = savePath / ("policy_epoch_" + str(epoch) + ".pt")
             valuePath = savePath / ("value_epoch_" + str(epoch) + ".pt")
