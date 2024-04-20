@@ -3,6 +3,8 @@ import math
 import cv2 as cv
 import numpy as np
 
+from carCamera import CarCamera
+
 
 class simulation:
     def __init__(self):
@@ -24,6 +26,8 @@ class simulation:
         #race params
         self.speedMovePixels = 20
         self.changeAngle = 5
+        self.background = self.generateCircleCourse(mask=True)
+        self.car = CarCamera(self.background)
 
 
     #NOTE!!!! If you wish to create new courses, but still use simulation. Just follow 3 step guide below.
@@ -42,6 +46,8 @@ class simulation:
         if mask:
             theCourse = 255 - theCourse
 
+        if mask:
+            theCourse = 255 - theCourse
         #for creating new courses, simply draw the inside curve here (step 3)
         cv.circle(theCourse, (int(self.xSize / 2), int(self.ySize / 2)),
                   min(int(self.xSize / 2), int(self.ySize / 2)) - self.edgeBufferSize - int(self.trackWidth /2), self.lineColor,
@@ -72,10 +78,12 @@ class simulation:
     def centerToPoint(self, point, angle, theCourse, color, draw=True):
         xChange, yChange = self.getXYChange(angle)
 
+        # cv.imshow("colorCourse",theCourse)
+        # cv.waitKey()
         firstPoint = (point[0] - xChange, point[1] - yChange)
         secondPoint = (point[0] + xChange, point[1] + yChange)
         if draw:
-            cv.arrowedLine(theCourse, secondPoint, firstPoint, color, self.carThickness)
+            cv.arrowedLine(theCourse, firstPoint, secondPoint, color, self.carThickness)
         else:
             return firstPoint, secondPoint
 
@@ -90,6 +98,8 @@ class simulation:
         # drawHelper(nextPoint, self.carColor)
 
         cv.imshow("theCourse", theCourse)
+        carView =self.car.getCarView(nextPoint,angle)
+        cv.imshow("car view",carView)
         cv.waitKey(1)
 
     def getAngle(self, angle):
@@ -141,8 +151,8 @@ class simulation:
             #get next points
             angle = self.getAngle(angle)
             firstPoint = self.calculateNextPoint(firstPoint, angle)
+            crash = self.checkBoundary(firstPoint, self.background, angle)
 
-            crash = self.checkBoundary(firstPoint, background, angle)
 
 
 
