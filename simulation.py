@@ -82,7 +82,7 @@ class simulation:
         firstPoint = (point[0] - xChange, point[1] - yChange)
         secondPoint = (point[0] + xChange, point[1] + yChange)
         if draw:
-            cv.arrowedLine(theCourse, secondPoint, firstPoint, color, self.carThickness)
+            cv.arrowedLine(theCourse, firstPoint, secondPoint, color, self.carThickness)
         else:
             return firstPoint, secondPoint
 
