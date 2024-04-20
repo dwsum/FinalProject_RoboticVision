@@ -46,6 +46,8 @@ class simulation:
         if mask:
             theCourse = 255 - theCourse
 
+        if mask:
+            theCourse = 255 - theCourse
         #for creating new courses, simply draw the inside curve here (step 3)
         cv.circle(theCourse, (int(self.xSize / 2), int(self.ySize / 2)),
                   min(int(self.xSize / 2), int(self.ySize / 2)) - self.edgeBufferSize - int(self.trackWidth /2), self.lineColor,
@@ -72,7 +74,6 @@ class simulation:
 
         print("angle", angle, "xchange", xChange, "ychange", yChange)
         return xChange, yChange
-
 
     def centerToPoint(self, point, angle, theCourse, color, draw=True):
         xChange, yChange = self.getXYChange(angle)
@@ -138,17 +139,20 @@ class simulation:
         prevPoint = None
         prevAngle = None
         theCourse = self.generateCircleCourse(mask=False)
-        angle = -30
+        background = self.generateCircleCourse(mask=True)
+        angle = -30.1#0.1
 
         while not crash:
             self.drawPoint(firstPoint, angle, prevPoint, prevAngle, theCourse)
 
             prevPoint = firstPoint
             prevAngle = angle
+
             #get next points
             angle = self.getAngle(angle)
             firstPoint = self.calculateNextPoint(firstPoint, angle)
             crash = self.checkBoundary(firstPoint, self.background, angle)
+
 
 
 
